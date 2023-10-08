@@ -1,2 +1,6 @@
 # Dependency Modul
 node_modules/
+
+# Env Config
+.env
+.prod.env
