@@ -37,7 +37,6 @@ exports.up = (pgm) => {
 			type: "TEXT",
 			references: "albums(name)",
 			notNull: false,
-			unique: true,
 		},
 		created_at: {
 			type: "TIMESTAMP",
@@ -48,14 +47,6 @@ exports.up = (pgm) => {
 			notNull: true,
 		},
 	});
-
-	// pgm.addConstraint("songs", "fk_songs_albums_id", {
-	// 	foreignKeys: { album_id: "albums(id)" },
-	// });
-
-	// pgm.addConstraint("songs", "fk_songs_albums_name", {
-	// 	foreignKeys: { album_name: "albums(name)" },
-	// });
 };
 
 exports.down = (pgm) => {
