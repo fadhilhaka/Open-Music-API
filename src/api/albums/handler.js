@@ -43,7 +43,6 @@ class AlbumHandler {
 			response.code(201);
 			return response;
 		} catch {
-			console.log("Proses catch postAlbumHandler");
 			if (error instanceof ClientError) {
 				const response = h.response({
 					status: "fail",
@@ -68,6 +67,7 @@ class AlbumHandler {
 		try {
 			const { id } = request.params;
 			const album = await this._service.getAlbumById(id);
+
 			return {
 				status: "success",
 				data: {
