@@ -9,14 +9,6 @@ class AlbumsService {
 		this._pool = new Pool();
 	}
 
-	async getAlbums() {
-		const query = `SELECT * FROM albums`;
-		const result = await this._pool.query(query);
-		const albums = result.rows.map(mapAlbumsDBToModel);
-
-		return albums;
-	}
-
 	async addAlbum({ name, year }) {
 		const id = nanoid(16);
 		const createdAt = new Date().toISOString();
@@ -36,6 +28,14 @@ class AlbumsService {
 		return result.rows[0].id;
 	}
 
+	async getAlbums() {
+		const query = `SELECT * FROM albums`;
+		const result = await this._pool.query(query);
+		const albums = result.rows.map(mapAlbumsDBToModel);
+
+		return albums;
+	}
+
 	async getAlbumById(id) {
 		const query = {
 			text: "SELECT * FROM albums WHERE id = $1",
@@ -48,7 +48,7 @@ class AlbumsService {
 			throw new NotFoundError("Album tidak ditemukan");
 		}
 
-		return result.rows.map(mapDBToModel)[0];
+		return result.rows.map(mapAlbumsDBToModel)[0];
 	}
 
 	async editAlbumById(id, { name, year }) {
