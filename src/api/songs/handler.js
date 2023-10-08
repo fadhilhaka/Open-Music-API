@@ -28,32 +28,32 @@ class SongHandler {
 			const songData = JSON.parse(request.payload);
 			this._validator.validateSongPayload(songData);
 
-			const songId = await this._service.addSong(songData);
+			const { id, albumName } = await this._service.addSong(songData);
+
 			const {
 				title,
 				year,
 				genre,
 				performer,
-				duration = "",
+				duration = null,
 				albumId = "",
 			} = songData;
-
-			const albumName = await this._service.getAlbumName(albumId);
 
 			const response = h.response({
 				status: "success",
 				message: "Berhasil menambahkan lagu",
 				data: {
-					songId,
+					id,
 					title,
 					year,
 					genre,
 					performer,
 					duration,
-					albumName,
 					albumId,
+					albumName,
 				},
 			});
+
 			response.code(201);
 			return response;
 		} catch {
