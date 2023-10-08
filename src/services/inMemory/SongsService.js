@@ -102,7 +102,7 @@ class SongsService {
 		};
 	}
 
-	deleteAlbumById(id) {
+	deleteSongById(id) {
 		const index = this._albums.findIndex((album) => album.id === id);
 
 		if (index === -1) {

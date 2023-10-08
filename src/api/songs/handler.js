@@ -145,11 +145,11 @@ class SongHandler {
 	async deleteSongByIdHandler(request, h) {
 		try {
 			const { id } = request.params;
-			await this._service.deleteAlbumById(id);
+			await this._service.deleteSongById(id);
 
 			return {
 				status: "success",
-				message: "Album berhasil dihapus",
+				message: "Lagu berhasil dihapus",
 			};
 		} catch (error) {
 			if (error instanceof ClientError) {
