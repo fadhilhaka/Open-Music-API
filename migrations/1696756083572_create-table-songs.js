@@ -33,11 +33,6 @@ exports.up = (pgm) => {
 			references: "albums(id)",
 			notNull: false,
 		},
-		album_name: {
-			type: "TEXT",
-			references: "albums(name)",
-			notNull: false,
-		},
 		created_at: {
 			type: "TIMESTAMP",
 			notNull: true,

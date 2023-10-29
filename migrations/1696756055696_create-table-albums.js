@@ -11,7 +11,6 @@ exports.up = (pgm) => {
 		name: {
 			type: "TEXT",
 			notNull: true,
-			unique: true,
 		},
 		year: {
 			type: "INTEGER",

@@ -7,7 +7,7 @@ exports.up = (pgm) => {
 		album_id: {
 			type: "VARCHAR(16)",
 			references: "albums(id)",
-			notNull: true,
+			notNull: false,
 		},
 		song_id: {
 			type: "VARCHAR(16)",
