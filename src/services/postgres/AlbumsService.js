@@ -38,25 +38,43 @@ class AlbumsService {
 
 	async getAlbumById(id) {
 		const query = {
-			text: "SELECT * FROM albums WHERE id = $1",
+			text: `
+			  SELECT
+				albums.id as album_id,
+				albums.name as album_name,
+				albums.year as album_year,
+				songs.id as song_id,
+				songs.title as song_title,
+				songs.performer as song_performer
+			  FROM
+				albums
+			  LEFT JOIN
+				songs ON albums.id = songs.album_id
+			  WHERE
+				albums.id = $1
+			`,
 			values: [id],
 		};
-		console.log(`getAlbumById ${id}`);
 
 		try {
 			const result = await this._pool.query(query);
 
-			console.log(`getAlbumById 1 ${id}`);
-
 			if (!result.rows.length) {
-				console.log(`getAlbumById album not found`);
 				throw new NotFoundError("Album tidak ditemukan");
-				return null; // Return null or an empty object
 			}
 
-			return result.rows.map(mapAlbumsDBToModel)[0];
+			const albumData = result.rows[0];
+			const songs = result.rows.filter((row) => row.song_id !== null);
+
+			const albumWithSongs = {
+				id: albumData.album_id,
+				name: albumData.album_name,
+				year: albumData.album_year,
+				songs: songs,
+			};
+
+			return albumWithSongs;
 		} catch (error) {
-			console.error(`Error in getAlbumById: ${error.message}`);
 			return null; // Return null or an empty object on error
 		}
 	}
