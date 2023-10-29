@@ -41,14 +41,24 @@ class AlbumsService {
 			text: "SELECT * FROM albums WHERE id = $1",
 			values: [id],
 		};
+		console.log(`getAlbumById ${id}`);
 
-		const result = await this._pool.query(query);
+		try {
+			const result = await this._pool.query(query);
 
-		if (!result.rows.length) {
-			throw new NotFoundError("Album tidak ditemukan");
+			console.log(`getAlbumById 1 ${id}`);
+
+			if (!result.rows.length) {
+				console.log(`getAlbumById album not found`);
+				throw new NotFoundError("Album tidak ditemukan");
+				return null; // Return null or an empty object
+			}
+
+			return result.rows.map(mapAlbumsDBToModel)[0];
+		} catch (error) {
+			console.error(`Error in getAlbumById: ${error.message}`);
+			return null; // Return null or an empty object on error
 		}
-
-		return result.rows.map(mapAlbumsDBToModel)[0];
 	}
 
 	async editAlbumById(id, { name, year }) {
@@ -69,6 +79,8 @@ class AlbumsService {
 	}
 
 	async deleteAlbumById(id) {
+		await this._deleteSongsByAlbumId(id);
+
 		const query = {
 			text: "DELETE FROM albums WHERE id = $1 RETURNING id",
 			values: [id],
@@ -79,6 +91,15 @@ class AlbumsService {
 		if (!result.rows[0].id) {
 			throw new NotFoundError(`Gagal menghapus album. Id tidak ditemukan`);
 		}
+	}
+
+	async _deleteSongsByAlbumId(albumId) {
+		const query = {
+			text: "DELETE FROM songs WHERE album_id = $1",
+			values: [albumId],
+		};
+
+		await this._pool.query(query);
 	}
 }
 
