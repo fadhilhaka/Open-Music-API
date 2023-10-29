@@ -1,5 +1,6 @@
 const { nanoid } = require("nanoid");
 const ClientError = require("../../exceptions/ClientError");
+const ServerError = require("../../exceptions/ServerError");
 
 class SongHandler {
 	constructor(service, validator) {
@@ -26,54 +27,48 @@ class SongHandler {
 	async postSongHandler(request, h) {
 		try {
 			const songData = JSON.parse(request.payload);
-			this._validator.validateSongPayload(songData);
 
-			const songId = await this._service.addSong(songData);
+			try {
+				this._validator.validateSongPayload(songData);
+			} catch (error) {
+				return this.getResponseError(error, h);
+			}
+
+			let id = "";
+
+			try {
+				id = await this._service.addSong(songData);
+			} catch (error) {
+				throw this.getResponseError(error, h);
+			}
+
 			const {
 				title,
 				year,
 				genre,
 				performer,
-				duration = "",
-				albumId = "",
+				duration = null,
+				albumId = null,
 			} = songData;
-
-			const albumName = await this._service.getAlbumName(albumId);
 
 			const response = h.response({
 				status: "success",
 				message: "Berhasil menambahkan lagu",
 				data: {
-					songId,
+					id,
 					title,
 					year,
 					genre,
 					performer,
 					duration,
-					albumName,
 					albumId,
 				},
 			});
+
 			response.code(201);
 			return response;
 		} catch {
-			if (error instanceof ClientError) {
-				const response = h.response({
-					status: "fail",
-					message: error.message,
-				});
-				response.code(error.statusCode);
-				return response;
-			}
-
-			// Server ERROR!
-			const response = h.response({
-				status: "error",
-				message: "Maaf, terjadi kegagalan pada server kami.",
-			});
-			response.code(500);
-			console.error(error);
-			return response;
+			this.handleError(error, h);
 		}
 	}
 
@@ -88,23 +83,7 @@ class SongHandler {
 				},
 			};
 		} catch (error) {
-			if (error instanceof ClientError) {
-				const response = h.response({
-					status: "fail",
-					message: error.message,
-				});
-				response.code(error.statusCode);
-				return response;
-			}
-
-			// Server ERROR!
-			const response = h.response({
-				status: "error",
-				message: "Maaf, terjadi kegagalan pada server kami.",
-			});
-			response.code(500);
-			console.error(error);
-			return response;
+			this.handleError(error, h);
 		}
 	}
 
@@ -122,54 +101,47 @@ class SongHandler {
 				message: "Album berhasil diperbarui",
 			};
 		} catch (error) {
-			if (error instanceof ClientError) {
-				const response = h.response({
-					status: "fail",
-					message: error.message,
-				});
-				response.code(error.statusCode);
-				return response;
-			}
-
-			// Server ERROR!
-			const response = h.response({
-				status: "error",
-				message: "Maaf, terjadi kegagalan pada server kami.",
-			});
-			response.code(500);
-			console.error(error);
-			return response;
+			this.handleError(error, h);
 		}
 	}
 
 	async deleteSongByIdHandler(request, h) {
 		try {
 			const { id } = request.params;
-			await this._service.deleteAlbumById(id);
+			console.log(`deleteSongByIdHandler`);
+			await this._service.deleteSongById(id);
+			console.log(`deleteSongByIdHandler done`);
 
 			return {
 				status: "success",
-				message: "Album berhasil dihapus",
+				message: "Lagu berhasil dihapus",
 			};
 		} catch (error) {
-			if (error instanceof ClientError) {
-				const response = h.response({
-					status: "fail",
-					message: error.message,
-				});
-				response.code(error.statusCode);
-				return response;
-			}
-
-			// Server ERROR!
-			const response = h.response({
-				status: "error",
-				message: "Maaf, terjadi kegagalan pada server kami.",
-			});
-			response.code(500);
-			console.error(error);
-			return response;
+			this.handleError(error, h);
 		}
+	}
+
+	handleError(error, h) {
+		if (error instanceof ClientError) {
+			return this.getResponseError(error, h);
+		} else {
+			const serverError = new ServerError(
+				"Maaf, terjadi kegagalan pada server kami."
+			);
+
+			this.getResponseError(serverError, h);
+		}
+	}
+
+	getResponseError(error, h) {
+		const response = h.response({
+			status: error.name,
+			statusCode: error.statusCode,
+			message: error.message,
+		});
+
+		console.error(error);
+		return response;
 	}
 }
 

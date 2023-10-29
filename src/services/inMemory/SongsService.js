@@ -15,9 +15,8 @@ class SongsService {
 		if (!albumIdIsEmpty) {
 			const albumData = await this._albumService.getAlbumById(albumId);
 			albumName = albumData.name;
-			console.log(`getAlbumName 1 ${albumName}`);
 		}
-		console.log(`getAlbumName 2 ${albumName}`);
+
 		return albumName;
 	}
 
@@ -52,7 +51,7 @@ class SongsService {
 		};
 
 		this._songs.push(newSong);
-		console.log(`addSong ${albumName} == ${newSong.albumName}`);
+
 		const isSuccess = this._songs.filter((song) => song.id === id).length > 0;
 
 		if (!isSuccess) {
@@ -64,10 +63,11 @@ class SongsService {
 
 	getSongById(id) {
 		const song = this._songs.filter((n) => n.id === id)[0];
+
 		if (!song) {
 			throw new NotFoundError("Lagu tidak ditemukan");
 		}
-		console.log(`getSongById ${song.albumName}`);
+
 		return song;
 	}
 
@@ -87,8 +87,9 @@ class SongsService {
 			albumId = "",
 			albumName = "",
 		} = songData;
+
 		const updatedAt = new Date().toISOString();
-		console.log(`getSongById ${albumName}`);
+
 		this._songs[index] = {
 			...this._songs[index],
 			title,
@@ -102,7 +103,7 @@ class SongsService {
 		};
 	}
 
-	deleteAlbumById(id) {
+	deleteSongById(id) {
 		const index = this._albums.findIndex((album) => album.id === id);
 
 		if (index === -1) {
