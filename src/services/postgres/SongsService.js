@@ -18,18 +18,9 @@ class SongsService {
 		duration = null,
 		albumId = null,
 	}) {
-		console.log(`addSong ${albumId}`);
 		const id = nanoid(16);
 		const createdAt = new Date().toISOString();
 		const updatedAt = createdAt;
-		const albumName = ""; //await this.getAlbumName(albumId);
-
-		const albumIdIsEmpty = albumId === null || albumId.length === 0;
-		const newAlbumId = albumIdIsEmpty ? id : albumId;
-
-		// albumId = newAlbumId;
-
-		console.log(`addSong 0: =${albumName}=  =${newAlbumId}= =${albumId}=`);
 
 		let query;
 
@@ -48,7 +39,7 @@ class SongsService {
 					genre,
 					performer,
 					duration,
-					albumId || id,
+					albumId,
 					createdAt,
 					updatedAt,
 				],
@@ -74,27 +65,17 @@ class SongsService {
 			};
 		}
 
-		console.log(`addSong query`);
 		try {
 			const result = await this._pool.query(query);
-			console.log(`addSong query done`);
+
 			if (!result.rows[0].id) {
-				console.log(`addSong InvariantError done`);
 				throw new InvariantError(`Gagal menambahkan lagu: ${title}`);
 			}
 
 			return id;
 		} catch (error) {
-			console.error(`Error in addSong query: ${error.message}`);
 			throw new InvariantError(`Gagal menambahkan lagu: ${title}`);
 		}
-
-		// if (!result.rows[0].id) {
-		// 	console.log(`addSong InvariantError done`);
-		// 	throw new InvariantError(`Gagal menambahkan lagu: ${title}`);
-		// }
-
-		// return id;
 	}
 
 	async getAlbumName(albumId) {
@@ -102,23 +83,16 @@ class SongsService {
 		const albumIdIsEmpty = albumId.length === 0;
 
 		if (!albumIdIsEmpty) {
-			// console.log(`getAlbumName 0`);
-			// const albumData = await this._albumService.getAlbumById(albumId);
-			// console.log(`getAlbumName ${albumData.name}`);
-			// albumName = albumData.name;
 			try {
 				const albumData = await this._albumService.getAlbumById(albumId);
 
 				if (albumData) {
-					console.log(`getAlbumName ${albumData.name}`);
 					albumName = albumData.name;
 				} else {
-					console.log(`Album not found for ID: ${albumId}`);
-					// Handle the case where the album is not found, you can choose to return null or an empty string.
+					throw new NotFoundError("Album tidak ditemukan");
 				}
 			} catch (error) {
-				console.error(`Error in getAlbumName: ${error.message}`);
-				// Handle the error, you can choose to return null or an empty string.
+				throw new NotFoundError("Album Name tidak ditemukan");
 			}
 		}
 
@@ -174,26 +148,12 @@ class SongsService {
 			text: "DELETE FROM songs WHERE id = $1 RETURNING id",
 			values: [id],
 		};
-		// console.error(`Error in deleteSongById: ${id}`);
-		// const result = await this._pool.query(query);
+
 		try {
-			console.log(`Deleting song with ID: ${id}`);
-			const result = await this._pool.query(query);
-			console.log(
-				`deleteSongById query done. Deleted ${result.rowCount} rows.`
-			);
+			await this._pool.query(query);
 		} catch (error) {
-			console.error(`Error in deleteSongById query: ${error.message}`);
-			throw error; // Rethrow the error to propagate it further
+			throw new NotFoundError(`Gagal menghapus lagu.`);
 		}
-
-		// if (!result.rows[0].id) {
-		// 	throw new NotFoundError(`Gagal menghapus lagu. Id tidak ditemukan`);
-		// }
-
-		// if (!result.rows.length) {
-		// 	throw new NotFoundError("Catatan gagal dihapus. Id tidak ditemukan");
-		// }
 	}
 
 	async deleteAlbumSongsBySongId(songId) {
@@ -203,15 +163,9 @@ class SongsService {
 		};
 
 		try {
-			const result = await this._pool.query(query);
-			console.log(
-				`deleteAlbumSongsBySongId query done. Deleted ${result.rowCount} rows.`
-			);
+			await this._pool.query(query);
 		} catch (error) {
-			console.error(
-				`Error in deleteAlbumSongsBySongId query: ${error.message}`
-			);
-			throw error; // Rethrow the error to propagate it further
+			throw new NotFoundError(`Gagal menghapus lagu.`);
 		}
 	}
 }

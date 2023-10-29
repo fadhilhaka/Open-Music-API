@@ -14,7 +14,7 @@ class SongHandler {
 		this.deleteSongByIdHandler = this.deleteSongByIdHandler.bind(this);
 	}
 
-	async getAllSongHandler(request, h) {
+	async getAllSongHandler() {
 		const songs = await this._service.getAllSong();
 		return {
 			status: "success",
@@ -67,7 +67,7 @@ class SongHandler {
 
 			response.code(201);
 			return response;
-		} catch {
+		} catch (error) {
 			this.handleError(error, h);
 		}
 	}
@@ -108,9 +108,7 @@ class SongHandler {
 	async deleteSongByIdHandler(request, h) {
 		try {
 			const { id } = request.params;
-			console.log(`deleteSongByIdHandler`);
 			await this._service.deleteSongById(id);
-			console.log(`deleteSongByIdHandler done`);
 
 			return {
 				status: "success",

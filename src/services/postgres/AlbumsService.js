@@ -64,7 +64,13 @@ class AlbumsService {
 			}
 
 			const albumData = result.rows[0];
-			const songs = result.rows.filter((row) => row.song_id !== null);
+			const songs = result.rows
+				.filter((row) => row.song_id !== null)
+				.map((row) => ({
+					id: row.song_id,
+					title: row.song_title,
+					performer: row.song_performer,
+				}));
 
 			const albumWithSongs = {
 				id: albumData.album_id,
