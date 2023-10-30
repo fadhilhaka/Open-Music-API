@@ -139,7 +139,14 @@ class SongsService {
 			});
 
 			const songs = result.rows.map(mapSongsDBToModel);
-			return songs;
+
+			const mappedSongs = songs.map((song) => ({
+				id: song.id,
+				title: song.title,
+				performer: song.performer,
+			}));
+
+			return mappedSongs;
 		} catch (error) {
 			throw new InvariantError(`Gagal mencari lagu.`);
 		}
@@ -180,24 +187,9 @@ class SongsService {
 	}
 
 	async deleteSongById(id) {
-		this.deleteAlbumSongsBySongId(id);
-
 		const query = {
 			text: "DELETE FROM songs WHERE id = $1 RETURNING id",
 			values: [id],
-		};
-
-		try {
-			await this._pool.query(query);
-		} catch (error) {
-			throw new NotFoundError(`Gagal menghapus lagu.`);
-		}
-	}
-
-	async deleteAlbumSongsBySongId(songId) {
-		const query = {
-			text: "DELETE FROM album_songs WHERE song_id = $1",
-			values: [songId],
 		};
 
 		try {
