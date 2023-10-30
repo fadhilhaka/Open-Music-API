@@ -1,5 +1,7 @@
 const { nanoid } = require("nanoid");
 const ClientError = require("../../exceptions/ClientError");
+const ServerError = require("../../exceptions/ServerError");
+const NotFoundError = require("../../exceptions/NotFoundError");
 
 class AlbumHandler {
 	constructor(service, validator) {
@@ -25,16 +27,14 @@ class AlbumHandler {
 
 	async postAlbumHandler(request, h) {
 		try {
-			const albumData = JSON.parse(request.payload);
-
 			try {
-				this._validator.validateAlbumPayload(albumData);
+				this._validator.validateAlbumPayload(request.payload);
 			} catch (error) {
-				return this.getResponseError(error, h);
+				return this.handleError(error, h);
 			}
 
-			const albumId = await this._service.addAlbum(albumData);
-			const { name, year } = albumData;
+			const albumId = await this._service.addAlbum(request.payload);
+			const { name, year } = request.payload;
 
 			const response = h.response({
 				status: "success",
@@ -47,8 +47,8 @@ class AlbumHandler {
 			});
 			response.code(201);
 			return response;
-		} catch {
-			this.handleError(error, h);
+		} catch (error) {
+			return this.handleError(error, h);
 		}
 	}
 
@@ -57,6 +57,10 @@ class AlbumHandler {
 			const { id } = request.params;
 			const album = await this._service.getAlbumById(id);
 
+			if (album === null) {
+				throw new NotFoundError("Album tidak ditemukan");
+			}
+
 			return {
 				status: "success",
 				data: {
@@ -64,31 +68,33 @@ class AlbumHandler {
 				},
 			};
 		} catch (error) {
-			this.handleError(error, h);
+			return this.handleError(error, h);
 		}
 	}
 
 	async putAlbumByIdHandler(request, h) {
 		try {
-			const albumData = JSON.parse(request.payload);
-
 			try {
-				this._validator.validateAlbumPayload(albumData);
+				this._validator.validateAlbumPayload(request.payload);
 			} catch (error) {
-				return this.getResponseError(error, h);
+				return this.handleError(error, h);
 			}
 
 			const { name, year } = request.payload;
 			const { id } = request.params;
 
-			await this._service.editAlbumById(id, { name, year });
+			try {
+				await this._service.editAlbumById(id, { name, year });
+			} catch (error) {
+				return this.handleError(error, h);
+			}
 
 			return {
 				status: "success",
 				message: "Album berhasil diperbarui",
 			};
 		} catch (error) {
-			this.handleError(error, h);
+			return this.handleError(error, h);
 		}
 	}
 
@@ -102,7 +108,7 @@ class AlbumHandler {
 				message: "Album berhasil dihapus",
 			};
 		} catch (error) {
-			this.handleError(error, h);
+			return this.handleError(error, h);
 		}
 	}
 
@@ -114,17 +120,18 @@ class AlbumHandler {
 				"Maaf, terjadi kegagalan pada server kami."
 			);
 
-			this.getResponseError(serverError, h);
+			serverError.statusCode = 500;
+			return this.getResponseError(serverError, h);
 		}
 	}
 
 	getResponseError(error, h) {
 		const response = h.response({
-			status: error.name,
-			statusCode: error.statusCode,
+			status: "fail",
 			message: error.message,
 		});
 
+		response.code(error.statusCode);
 		console.error(error);
 		return response;
 	}

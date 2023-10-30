@@ -37,6 +37,12 @@ class AlbumsService {
 	}
 
 	async getAlbumById(id) {
+		const albumExists = await this._albumExists(id);
+
+		if (!albumExists) {
+			throw new NotFoundError(`Gagal menghapus album. Id tidak ditemukan`);
+		}
+
 		const query = {
 			text: `
 			  SELECT
@@ -58,12 +64,8 @@ class AlbumsService {
 
 		try {
 			const result = await this._pool.query(query);
-
-			if (!result.rows.length) {
-				throw new NotFoundError("Album tidak ditemukan");
-			}
-
 			const albumData = result.rows[0];
+
 			const songs = result.rows
 				.filter((row) => row.song_id !== null)
 				.map((row) => ({
@@ -81,28 +83,41 @@ class AlbumsService {
 
 			return albumWithSongs;
 		} catch (error) {
-			return null; // Return null or an empty object on error
+			return null;
 		}
 	}
 
 	async editAlbumById(id, { name, year }) {
+		const albumExists = await this._albumExists(id);
 		const updatedAt = new Date().toISOString();
+
+		if (!albumExists) {
+			throw new NotFoundError(`Gagal menghapus album. Id tidak ditemukan`);
+		}
 
 		const query = {
 			text: "UPDATE albums SET name = $1, year = $2, updated_at = $3 WHERE id = $4 RETURNING id",
 			values: [name, year, updatedAt, id],
 		};
 
-		const result = await this._pool.query(query);
+		try {
+			const result = await this._pool.query(query);
 
-		if (!result.rows[0].id) {
-			throw new NotFoundError(
-				`Gagal memperbarui album: ${name}. Id tidak ditemukan`
-			);
+			if (!result.rows[0].id || result.rowCount === 0) {
+				throw new NotFoundError(`Gagal memperbarui album.`);
+			}
+		} catch (error) {
+			throw new InvariantError(`Gagal memperbarui album.`);
 		}
 	}
 
 	async deleteAlbumById(id) {
+		const albumExists = await this._albumExists(id);
+
+		if (!albumExists) {
+			throw new NotFoundError(`Gagal menghapus album. Id tidak ditemukan`);
+		}
+
 		await this._deleteSongsByAlbumId(id);
 
 		const query = {
@@ -124,6 +139,19 @@ class AlbumsService {
 		};
 
 		await this._pool.query(query);
+	}
+
+	async _albumExists(albumId) {
+		try {
+			const result = await this._pool.query({
+				text: "SELECT COUNT(*) FROM albums WHERE id = $1",
+				values: [albumId],
+			});
+
+			return result.rows[0].count > 0;
+		} catch {
+			return false;
+		}
 	}
 }
 
