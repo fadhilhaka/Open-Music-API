@@ -1,6 +1,7 @@
 const { nanoid } = require("nanoid");
 const ClientError = require("../../exceptions/ClientError");
 const ServerError = require("../../exceptions/ServerError");
+const NotFoundError = require("../../exceptions/NotFoundError");
 
 class SongHandler {
 	constructor(service, validator) {
@@ -14,33 +15,26 @@ class SongHandler {
 		this.deleteSongByIdHandler = this.deleteSongByIdHandler.bind(this);
 	}
 
-	async getAllSongHandler() {
-		const songs = await this._service.getAllSong();
-		return {
-			status: "success",
-			data: {
-				songs,
-			},
-		};
+	async getAllSongHandler(request, h) {
+		try {
+			this._validator.validateSongQuery(request.query);
+			const songs = await this._service.getAllSong(request.query);
+
+			return {
+				status: "success",
+				data: {
+					songs,
+				},
+			};
+		} catch (error) {
+			return this.handleError(error, h);
+		}
 	}
 
 	async postSongHandler(request, h) {
 		try {
-			const songData = JSON.parse(request.payload);
-
-			try {
-				this._validator.validateSongPayload(songData);
-			} catch (error) {
-				return this.getResponseError(error, h);
-			}
-
-			let id = "";
-
-			try {
-				id = await this._service.addSong(songData);
-			} catch (error) {
-				throw this.getResponseError(error, h);
-			}
+			this._validator.validateSongPayload(request.payload);
+			const id = await this._service.addSong(request.payload);
 
 			const {
 				title,
@@ -49,7 +43,7 @@ class SongHandler {
 				performer,
 				duration = null,
 				albumId = null,
-			} = songData;
+			} = request.payload;
 
 			const response = h.response({
 				status: "success",
@@ -68,46 +62,70 @@ class SongHandler {
 			response.code(201);
 			return response;
 		} catch (error) {
-			this.handleError(error, h);
+			return this.handleError(error, h);
 		}
 	}
 
 	async getSongByIdHandler(request, h) {
+		const { id } = request.params;
+		const songExists = await this._service._songExists(id);
+
+		if (!songExists) {
+			const error = new NotFoundError("Lagu tidak ditemukan");
+			return this.handleError(error, h);
+		}
+
 		try {
-			const { id } = request.params;
-			const album = await this._service.getSongById(id);
+			const song = await this._service.getSongById(id);
 			return {
 				status: "success",
 				data: {
-					album,
+					song,
 				},
 			};
 		} catch (error) {
-			this.handleError(error, h);
+			return this.handleError(error, h);
 		}
 	}
 
 	async putSongByIdHandler(request, h) {
+		const { id } = request.params;
+		const songExists = await this._service._songExists(id);
+
+		if (!songExists) {
+			const error = new NotFoundError("Lagu tidak ditemukan");
+			return this.handleError(error, h);
+		}
+
 		try {
-			const songData = JSON.parse(request.payload);
-			this._validator.validateSongPayload(songData);
+			this._validator.validateSongPayload(request.payload);
+		} catch (error) {
+			const clientError = new ClientError(error.message);
+			return this.handleError(clientError, h);
+		}
 
-			const { id } = request.params;
-
-			await this._service.editSongById(id, songData);
+		try {
+			await this._service.editSongById(id, request.payload);
 
 			return {
 				status: "success",
-				message: "Album berhasil diperbarui",
+				message: "Lagu berhasil diperbarui",
 			};
 		} catch (error) {
-			this.handleError(error, h);
+			return this.handleError(error, h);
 		}
 	}
 
 	async deleteSongByIdHandler(request, h) {
+		const { id } = request.params;
+		const songExists = await this._service._songExists(id);
+
+		if (!songExists) {
+			const error = new NotFoundError("Lagu tidak ditemukan");
+			return this.handleError(error, h);
+		}
+
 		try {
-			const { id } = request.params;
 			await this._service.deleteSongById(id);
 
 			return {
@@ -120,24 +138,25 @@ class SongHandler {
 	}
 
 	handleError(error, h) {
-		if (error instanceof ClientError) {
+		if (error instanceof ClientError || error instanceof NotFoundError) {
 			return this.getResponseError(error, h);
 		} else {
 			const serverError = new ServerError(
 				"Maaf, terjadi kegagalan pada server kami."
 			);
 
-			this.getResponseError(serverError, h);
+			serverError.statusCode = 500;
+			return this.getResponseError(serverError, h);
 		}
 	}
 
 	getResponseError(error, h) {
 		const response = h.response({
-			status: error.name,
-			statusCode: error.statusCode,
+			status: "fail",
 			message: error.message,
 		});
 
+		response.code(error.statusCode);
 		console.error(error);
 		return response;
 	}

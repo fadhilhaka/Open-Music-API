@@ -10,6 +10,19 @@ class SongsService {
 		this._albumService = albumsService;
 	}
 
+	async _songExists(id) {
+		try {
+			const result = await this._pool.query({
+				text: "SELECT COUNT(*) FROM songs WHERE id = $1",
+				values: [id],
+			});
+
+			return result.rows[0].count > 0;
+		} catch {
+			return false;
+		}
+	}
+
 	async addSong({
 		title,
 		year,
@@ -99,12 +112,37 @@ class SongsService {
 		return albumName;
 	}
 
-	async getAllSong() {
-		const query = `SELECT * FROM songs`;
-		const result = await this._pool.query(query);
-		const songs = result.rows.map(mapSongsDBToModel);
+	async getAllSong(songQuery) {
+		try {
+			let query = `SELECT * FROM songs`;
+			const { title, performer } = songQuery;
+			const queryParams = [];
+			const queryValues = [];
 
-		return songs;
+			if (title) {
+				queryParams.push(`title ILIKE $${queryParams.length + 1}`);
+				queryValues.push(`%${title}%`);
+			}
+
+			if (performer) {
+				queryParams.push(`performer ILIKE $${queryParams.length + 1}`);
+				queryValues.push(`%${performer}%`);
+			}
+
+			if (queryParams.length > 0) {
+				query += " WHERE " + queryParams.join(" AND ");
+			}
+
+			const result = await this._pool.query({
+				text: query,
+				values: queryValues,
+			});
+
+			const songs = result.rows.map(mapSongsDBToModel);
+			return songs;
+		} catch (error) {
+			throw new InvariantError(`Gagal mencari lagu.`);
+		}
 	}
 
 	async getSongById(id) {
